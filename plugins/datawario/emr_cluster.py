@@ -12,38 +12,59 @@ from airflow.contrib.sensors.emr_job_flow_sensor import EmrJobFlowSensor
 from airflow.utils.task_group import TaskGroup
 
 
-EmrCreateJobFlowOperator.ui_color = '#ffd27f'
-EmrStepSensor.ui_color = '#ffd27f'
-EmrTerminateJobFlowOperator.ui_color = '#ffd27f'
+EmrCreateJobFlowOperator.ui_color = '#ffe4b2'
+EmrStepSensor.ui_color = '#ffe4b2'
+EmrTerminateJobFlowOperator.ui_color = '#ffe4b2'
 EmrAddStepsOperator.ui_color = "#f59e9e"
-EmrJobFlowSensor.ui_color = '#ffd27f'
+EmrJobFlowSensor.ui_color = '#ffe4b2'
 
 JOB_FLOW_ROLE = 'DataWarioDefaultPipelineResourceRole'
 SERVICE_ROLE = 'DataWarioDefaultPipelineRole'
 
-SPARK_PI_STEPS = [
-    {
-        'Name': 'calculate_pi',
-        'ActionOnFailure': 'CONTINUE',
-        'HadoopJarStep': {
-            'Jar': 'command-runner.jar',
-            'Args': ['/usr/lib/spark/bin/run-example', 'SparkPi', '10'],
 
-        },
-    }
-]
+class SparkApps(object):
 
-SPARK_PUBLISH_STEPS = [
-    {
-        'Name': 'calculate_pi',
-        'ActionOnFailure': 'CONTINUE',
-        'HadoopJarStep': {
-            'Jar': 'command-runner.jar',
-            'Args': ['/usr/lib/spark/bin/run-example', 'SparkPi', '10'],
+    @staticmethod
+    def publish_hive_table(s3, schema_name, table_name, input_format='parquet'):
+        cmd = f"spark-submit \
+                      --conf spark.driver.maxResultSize=5g \
+                      --deploy-mode client \
+                      --class com.scout24.data.dataLakeSparkUtils.hive.PublishHiveTableWrapper \
+                      #mySparkUtilsArtifactsPath \
+                      --schema-name {schema_name} \
+                      --table-name {table_name} \
+                      --input-format {input_format} \
+                      --overwrite-table true \
+                      --s3-location-base-path {s3} \
+                      --partitioned-column-name 'partition_date' \
+                      --partitioned-column-type 'date' \
+                      --pipeline-name 'myProjectName'"
 
-        },
-    }
-]
+        return [
+                  {
+                        'Name': 'calculate_pi',
+                        'ActionOnFailure': 'CONTINUE',
+                        'HadoopJarStep': {
+                            'Jar': 'command-runner.jar',
+                            'Args': cmd.split(" "),
+
+                        },
+                  }
+                ]
+
+    @staticmethod
+    def my_spark_app(artifact_loc, class_name):
+        return [
+            {
+                'Name': 'calculate_pi',
+                'ActionOnFailure': 'CONTINUE',
+                'HadoopJarStep': {
+                    'Jar': 'command-runner.jar',
+                    'Args': ['/usr/lib/spark/bin/run-example', 'SparkPi', '10'],
+
+                },
+            }
+        ]
 
 
 JOB_FLOW_OVERRIDES = {
