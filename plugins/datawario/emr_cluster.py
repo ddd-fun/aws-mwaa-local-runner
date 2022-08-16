@@ -22,7 +22,7 @@ JOB_FLOW_ROLE = 'DataWarioDefaultPipelineResourceRole'
 SERVICE_ROLE = 'DataWarioDefaultPipelineRole'
 
 
-class SparkApps(object):
+class SparkUtils:
 
     @staticmethod
     def publish_hive_table(s3, schema_name, table_name, input_format='parquet'):
@@ -53,7 +53,7 @@ class SparkApps(object):
                 ]
 
     @staticmethod
-    def my_spark_app(artifact_loc, class_name):
+    def my_spark_app(artifact_loc, app_class_name):
         return [
             {
                 'Name': 'calculate_pi',
@@ -130,5 +130,55 @@ class EmrCluster:
             task_id='terminate_cluster',
             job_flow_id="{{ task_instance.xcom_pull(task_ids='create_emr_cluster', key='return_value') }}",
         )
+        self.flow = self.flow >> cluster_remover
+        return False
+
+
+class EmrClusterCompactUI:
+
+    def __init__(self, dag):
+       self.dag = dag
+       self.flow = None
+
+    def __enter__(self):
+        with TaskGroup("create_emr", tooltip="create and wait for emr") as section_1:
+            job_flow_creator = EmrCreateJobFlowOperator(
+                task_id='create_emr_cluster',
+                job_flow_overrides=JOB_FLOW_OVERRIDES,
+                dag=self.dag
+            )
+            job_sensor = EmrJobFlowSensor(
+                task_id='wait_for_job_flow',
+                job_flow_id=job_flow_creator.output,
+                dag=self.dag
+            )
+        self.flow = section_1
+        return self
+
+    def add_spark_steps(self, id, spark_steps):
+        with TaskGroup(id, tooltip="submit and wait for spark app") as section_2:
+            step_adder = EmrAddStepsOperator(
+                task_id=id,
+                job_flow_id="{{ task_instance.xcom_pull(task_ids='create_emr_cluster', key='return_value')}}",
+                steps=spark_steps,
+                dag=self.dag
+            )
+            step_checker = EmrStepSensor(
+                task_id=f'wait_for_{id}',
+                job_flow_id="{{ task_instance.xcom_pull(task_ids='create_emr_cluster', key='return_value')}}",
+                step_id="{{ task_instance.xcom_pull(task_ids='spark_steps', key='return_value')[0] }}",
+                dag=self.dag
+            )
+            step_adder >> step_checker
+        self.flow = self.flow >> section_2
+
+    def get_emr_flow(self):
+        return self.flow
+
+    def __exit__(self, exc_type, exc_value, exc_traceback):
+        cluster_remover = EmrTerminateJobFlowOperator(
+                task_id='terminate_cluster',
+                job_flow_id="{{ task_instance.xcom_pull(task_ids='create_emr_cluster', key='return_value') }}",
+                dag=self.dag)
         self.flow = self.flow >> cluster_remover
         return False
