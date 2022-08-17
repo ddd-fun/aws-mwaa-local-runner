@@ -19,10 +19,6 @@ EmrAddStepsOperator.ui_color = "#f59e9e"
 EmrJobFlowSensor.ui_color = '#ffe4b2'
 
 
-
-S3_ARTIFACT = {{ artifact.path }}
-S3_DATA_LOCATION = {{ data.input.s3loc }}
-
 JOB_FLOW_ROLE = 'DataWarioDefaultPipelineResourceRole'
 SERVICE_ROLE = 'DataWarioDefaultPipelineRole'
 
@@ -36,7 +32,7 @@ JOB_FLOW_OVERRIDES = {
                 'Name': 'Primary node',
                 'Market': 'ON_DEMAND',
                 'InstanceRole': 'MASTER',
-                'InstanceType': 'm5.xlarge',
+                'InstanceType': '{{ emr.instance_type }}',
                 'InstanceCount': 1,
             },
         ],
@@ -59,14 +55,10 @@ MY_SPARK_STEPS = [
                 "--deploy-mode",
                 "client",
                 "--class",
-                "{{ myapp_class}}",
-                "{{ params.mySalesforceObjectProcessorArtifactPath }}",
+                "{{ pipeline.spark.class }}",
+                "{{ pipeline.spark.jar_loc }}",
                 "--config-file-path",
-                "/home/hadoop/artifacts/object-processor-dag_cfg.yaml",
-                "--range-start-date",
-                "{{params.myStartDate}}",
-                "--range-end-date",
-                "{{params.myEndDate}}"
+                "/home/hadoop/artifacts/object-processor-dag_cfg.yaml"
             ],
         },
     },
@@ -84,13 +76,9 @@ PUBLISH_TABLE_SPARK_UTILS = [
                 "client",
                 "--class",
                 "com.autoscout24.data.publishTableWrapper",
-                "{{params.mySalesforceObjectProcessorArtifactPath}}",
-                "--config-file-path",
-                "s3://as24-data-artifacts/datawario/my-team/artifacts/publish",
-                "--range-start-date",
-                "{{params.myStartDate}}",
-                "--range-end-date",
-                "{{params.myEndDate}}"
+                "{{ pipeline.publish.jar_loc or  's3://as24-data/artifact/spark_utils,jar' }}",
+                "--s3",
+                "{{ pipeline.publish.bucket }}"
             ],
         },
     },
@@ -108,7 +96,7 @@ default_args = {
     "retry_delay": timedelta(minutes=5),
 }
 
-with DAG(dag_id={{ name }}_id, default_args=default_args, schedule_interval='{{ product.pipeline.schedule or '0 3 * * *' }}') as dag:
+with DAG(dag_id='{{ dag_id }}', default_args=default_args, schedule_interval='{{ pipeline.schedule or '0 3 * * *' }}') as dag:
 
     job_flow_creator = EmrCreateJobFlowOperator(
         task_id='create_emr_cluster',
@@ -122,30 +110,30 @@ with DAG(dag_id={{ name }}_id, default_args=default_args, schedule_interval='{{ 
 
     spark_app_step = EmrAddStepsOperator(
         task_id="submit_spark_app",
-        job_flow_id="{{ task_instance.xcom_pull(task_ids='create_emr_cluster', key='return_value')}}",
-        steps=MY_SPARK_STEPS,
+        job_flow_id={% raw %}"{{ task_instance.xcom_pull(task_ids='create_emr_cluster', key='return_value')}}"{% endraw %},
+        steps=MY_SPARK_STEPS
     )
 
     spark_app_checker = EmrStepSensor(
         task_id=f'wait_for_my_spark_app',
-        job_flow_id="{{ task_instance.xcom_pull(task_ids='create_emr_cluster', key='return_value')}}",
-        step_id="{{ task_instance.xcom_pull(task_ids='submit_spark_app', key='return_value')[0] }}",
+        job_flow_id={% raw %}"{{ task_instance.xcom_pull(task_ids='create_emr_cluster', key='return_value')}}"{% endraw %},
+        step_id={% raw %}"{{ task_instance.xcom_pull(task_ids='submit_spark_app', key='return_value')[0] }}"{% endraw %},
     )
 
     publish_table_step = EmrAddStepsOperator(
         task_id="publish_table",
-        job_flow_id="{{ task_instance.xcom_pull(task_ids='create_emr_cluster', key='return_value')}}",
+        job_flow_id={% raw %}"{{ task_instance.xcom_pull(task_ids='create_emr_cluster', key='return_value')}}"{% endraw %},
         steps=PUBLISH_TABLE_SPARK_UTILS,
     )
 
     publish_table_step_checker = EmrStepSensor(
         task_id=f'wait_for_publish_table',
-        job_flow_id="{{ task_instance.xcom_pull(task_ids='create_emr_cluster', key='return_value')}}",
-        step_id="{{ task_instance.xcom_pull(task_ids='spark_steps', key='return_value')[0] }}",
+        job_flow_id={% raw %}"{{ task_instance.xcom_pull(task_ids='create_emr_cluster', key='return_value')}}"{% endraw %},
+        step_id={% raw %}"{{ task_instance.xcom_pull(task_ids='spark_steps', key='return_value')[0] }}"{% endraw %},
     )
     cluster_remover = EmrTerminateJobFlowOperator(
         task_id='terminate_cluster',
-        job_flow_id="{{ task_instance.xcom_pull(task_ids='publish_table', key='return_value') }}",
+        job_flow_id={% raw %}"{{ task_instance.xcom_pull(task_ids='publish_table', key='return_value') }}"{% endraw %},
     )
 
     op2 = BashOperator(task_id=f"quality_checks", bash_command=f"echo 'team_quality_cheks'")
