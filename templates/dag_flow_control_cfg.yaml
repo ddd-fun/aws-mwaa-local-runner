@@ -1,0 +1,10 @@
+dag_id: "flow_control_from_template"
+schedule_interval: "@daily"
+catchup: False
+input: "s3://as24-data/raw/mydag/"
+transform:
+  - "one"
+  - "two"
+  - "three"
+output: "s3://as24-data/processed/mydag"
+data_quality_checks: "run great_expectation --path"
