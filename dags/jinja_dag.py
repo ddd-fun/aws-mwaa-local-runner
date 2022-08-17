@@ -18,24 +18,24 @@ default_args = {
 }
 
 
-with DAG("{{ dag_id }}",
+with DAG("my_dag_from_template",
          default_args=default_args,
-         schedule_interval="{{ schedule_interval }}",
-         catchup={{ catchup or False }}) as dag:
+         schedule_interval="@daily",
+         catchup=False) as dag:
 
     extract = BashOperator(
         task_id="extract",
-        bash_command="echo 'extract from {{ input }}'"
+        bash_command="echo 'extract from s3://as24-data/raw/mydag/'"
     )
 
     transform = BashOperator(
         task_id="transform",
-        bash_command="echo 'transform from {{ input }}'"
+        bash_command="echo 'transform from s3://as24-data/raw/mydag/'"
     )
 
     load = BashOperator(
         task_id="load",
-        bash_command="echo 'load to {{ output }}'"
+        bash_command="echo 'load to s3://as24-data/processed/mydag'"
     )
 
 extract >> transform >> load

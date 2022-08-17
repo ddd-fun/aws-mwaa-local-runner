@@ -1,4 +1,5 @@
 dag_id: "my_dag_from_template"
 schedule_interval: "@daily"
 catchup: False
-input: 126
+input: "s3://as24-data/raw/mydag/"
+output: "s3://as24-data/processed/mydag"
