@@ -1,0 +1,4 @@
+dag_id: "my_dag_from_template"
+schedule_interval: "@daily"
+catchup: False
+input: 126
