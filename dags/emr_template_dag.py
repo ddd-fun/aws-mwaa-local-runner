@@ -76,7 +76,7 @@ PUBLISH_TABLE_SPARK_UTILS = [
                 "client",
                 "--class",
                 "com.autoscout24.data.publishTableWrapper",
-                "s3://as24-data/artifact/spark_utils,jar",
+                "s3://as24-data/artifact/spark_utils.jar",
                 "--s3",
                 ""
             ],

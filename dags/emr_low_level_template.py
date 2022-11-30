@@ -20,7 +20,7 @@ S3_DATA_LOCATION = "s3://as24data-processed/mesh-team/pipeline/"
 with DAG("emr_api_example", default_args=default_args, schedule_interval=timedelta(1)) as dag:
     with EmrCluster(dag) as emr:
         emr.add_spark_steps("spark_transform", SparkUtils.my_spark_app(S3_ARTIFACT, "com.as24.meshteam.SparkApp"))
-        emr.add_spark_steps("spark_publish_result", SparkUtils.publish_hive_table(S3_DATA_LOCATION, "meshteam", "table_1"))
+        emr.add_spark_steps("spark_publish_result", SparkUtils.publish_hive_table(S3_DATA_LOCATION, "mesh_team", "table_1"))
 
     op2 = BashOperator(task_id=f"quality_checks", bash_command=f"echo 'team_quality_cheks'")
 
