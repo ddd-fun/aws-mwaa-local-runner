@@ -21,21 +21,29 @@ default_args = {
 with DAG("{{ dag_id }}",
          default_args=default_args,
          schedule_interval="{{ schedule_interval }}",
-         catchup={{ catchup or False }}) as dag:
+         catchup={{ catchup or False }}, tags=['workshop']) as dag:
 
     extract = BashOperator(
         task_id="extract",
         bash_command="echo 'extract from {{ input }}'"
     )
+    flow = extract
 
-    transform = BashOperator(
-        task_id="transform",
-        bash_command="echo 'transform from {{ input }}'"
-    )
+    {%  for task in transform %}
+    flow = flow >> BashOperator(task_id="transform_{{task}}",
+                                 bash_command="echo 'transform {{task}} from {{ input }}'")
+    {% endfor %}
+
+    {% if data_quality_checks %}
+    flow = flow >> BashOperator(task_id="quality_checks",
+                                bash_command="echo '{{ data_quality_checks }}'")
+    {% endif %}
 
     load = BashOperator(
         task_id="load",
         bash_command="echo 'load to {{ output }}'"
     )
 
-extract >> transform >> load
+    flow >> load
+
+
