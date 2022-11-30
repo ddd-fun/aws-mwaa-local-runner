@@ -18,10 +18,10 @@ default_args = {
 }
 
 
-with DAG("flow_control_from_template",
+with DAG("dag_from_recap_jinja_flow_control_template",
          default_args=default_args,
          schedule_interval="@daily",
-         catchup=False) as dag:
+         catchup=False, tags=['workshop']) as dag:
 
     extract = BashOperator(
         task_id="extract",

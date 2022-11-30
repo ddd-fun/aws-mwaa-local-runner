@@ -1,4 +1,4 @@
-dag_id: "emr_process_publish_template"
+dag_id: "dag_from_emr_jinja_template"
 emr:
   instance_type: "m5.xlarge"
   cluster_size: 1

@@ -1,10 +1,6 @@
 from airflow import DAG
-from datetime import datetime
-
-from airflow import DAG
 from airflow.operators.bash_operator import BashOperator
 from datetime import datetime, timedelta
-from airflow.decorators import task
 
 default_args = {
     "owner": "data_mesh_team",
@@ -18,24 +14,24 @@ default_args = {
 }
 
 
-with DAG("my_dag_from_template",
+with DAG("{{ dag_id }}",
          default_args=default_args,
-         schedule_interval="@daily",
-         catchup=False) as dag:
+         schedule_interval="{{ schedule_interval }}",
+         catchup={{ catchup or False }}, tags=['workshop']) as dag:
 
     extract = BashOperator(
         task_id="extract",
-        bash_command="echo 'extract from s3://as24-data/raw/mydag/'"
+        bash_command="echo 'extract from {{ input }}'"
     )
 
     transform = BashOperator(
         task_id="transform",
-        bash_command="echo 'transform from s3://as24-data/raw/mydag/'"
+        bash_command="echo 'transform from {{ input }}'"
     )
 
     load = BashOperator(
         task_id="load",
-        bash_command="echo 'load to s3://as24-data/processed/mydag'"
+        bash_command="echo 'load to {{ output }}'"
     )
 
 extract >> transform >> load

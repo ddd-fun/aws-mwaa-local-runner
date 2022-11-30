@@ -53,7 +53,7 @@ class SparkUtils:
                 ]
 
     @staticmethod
-    def my_spark_app(artifact_loc, app_class_name):
+    def spark_app(artifact_loc, app_class_name):
         return [
             {
                 'Name': 'calculate_pi',

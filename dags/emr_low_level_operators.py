@@ -108,7 +108,7 @@ default_args = {
     "retry_delay": timedelta(minutes=5),
 }
 
-with DAG("emr_low_level_api", default_args=default_args, schedule_interval=timedelta(1)) as dag:
+with DAG("emr_low_level_operators", default_args=default_args, schedule_interval=timedelta(1), tags=['workshop']) as dag:
 
     job_flow_creator = EmrCreateJobFlowOperator(
         task_id='create_emr_cluster',

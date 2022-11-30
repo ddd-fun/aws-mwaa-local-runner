@@ -58,7 +58,7 @@ MY_SPARK_STEPS = [
                 "com.as24.data.product.SparkApp",
                 "s3://as24-data/artifacts/team/product/spark_app.jar",
                 "--config-file-path",
-                "/home/hadoop/artifacts/object-processor-dag_cfg.yaml"
+                "/home/hadoop/artifacts/object-processor-recap_dag_cfg.yaml"
             ],
         },
     },
@@ -96,7 +96,7 @@ default_args = {
     "retry_delay": timedelta(minutes=5),
 }
 
-with DAG(dag_id='emr_process_publish_template', default_args=default_args, schedule_interval='@daily') as dag:
+with DAG(dag_id='dag_from_emr_jinja_template', default_args=default_args, schedule_interval='@daily', tags=['workshop']) as dag:
 
     job_flow_creator = EmrCreateJobFlowOperator(
         task_id='create_emr_cluster',
